@@ -1,0 +1,16 @@
+name: disaster_response_env
+version: "0.1.0"
+description: Disaster response planning environment for OpenEnv hackathon
+
+environment:
+  entrypoint: server.app:app
+
+tasks:
+  easy:
+    description: Allocate ambulance to highest severity region
+
+  medium:
+    description: Handle multiple regions efficiently
+
+  hard:
+    description: Optimize full disaster response
