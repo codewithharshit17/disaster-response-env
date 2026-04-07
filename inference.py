@@ -12,7 +12,13 @@ API_BASE_URL = os.getenv(
 MODEL_NAME = os.getenv("MODEL_NAME", "gpt-3.5-turbo")
 API_KEY = os.getenv("HF_TOKEN")
 
-client = OpenAI(api_key=API_KEY)
+client = None
+
+if API_KEY:
+    try:
+        client = OpenAI(api_key=API_KEY)
+    except:
+        client = None
 
 TASK_NAME = "easy"
 ENV_NAME = "disaster_response"
