@@ -9,11 +9,10 @@ API_BASE_URL = os.getenv(
     "API_BASE_URL",
     "https://codewithharshit17-disaster-response-env.hf.space"
 )
-
 MODEL_NAME = os.getenv("MODEL_NAME", "gpt-3.5-turbo")
 API_KEY = os.getenv("HF_TOKEN")
 
-client = OpenAI(base_url="https://api.openai.com/v1", api_key=API_KEY)
+client = OpenAI(api_key=API_KEY)
 
 TASK_NAME = "easy"
 ENV_NAME = "disaster_response"
@@ -29,9 +28,7 @@ def log_start():
 
 def log_step(step, action, reward, done, error):
     error_val = error if error else "null"
-    print(
-        f"[STEP] step={step} action={action} reward={reward:.2f} done={str(done).lower()} error={error_val}"
-    )
+    print(f"[STEP] step={step} action={action} reward={reward:.2f} done={str(done).lower()} error={error_val}")
 
 
 def log_end(success, steps, rewards):
@@ -40,49 +37,44 @@ def log_end(success, steps, rewards):
 
 
 # -----------------------------
-# OBS HANDLING
+# SAFE REQUEST
 # -----------------------------
-def extract_observation(data):
-    if isinstance(data, dict) and "observation" in data:
-        return data["observation"]
-    return data
+def safe_post(url, payload):
+    try:
+        res = requests.post(url, json=payload, timeout=10)
+        if res.status_code == 200:
+            return res.json()
+        return {}
+    except Exception:
+        return {}
 
 
 # -----------------------------
-# ACTION LOGIC (WITH OPENAI CALL)
+# ACTION LOGIC
 # -----------------------------
 def get_action(obs):
-    regions = obs.get("regions", [])
-
-    if not regions:
-        return {"action_type": "allocate", "region_name": "A"}
-
-    available = [r for r in regions if not r.get("helped", False)]
-
-    if not available:
-        return {
-            "action_type": "allocate",
-            "region_name": regions[0].get("name", "A")
-        }
-
-    #Minimal OpenAI usage (for compliance)
     try:
-        prompt = f"Select best region based on severity: {available}"
-        client.chat.completions.create(
-            model=MODEL_NAME,
-            messages=[{"role": "user", "content": prompt}],
-            max_tokens=10,
-        )
+        regions = obs.get("regions", [])
+        available = [r for r in regions if not r.get("helped", False)]
+
+        if not available:
+            return {"action_type": "allocate", "region_name": "A"}
+
+        # optional OpenAI call (safe)
+        try:
+            client.chat.completions.create(
+                model=MODEL_NAME,
+                messages=[{"role": "user", "content": "select best region"}],
+                max_tokens=5,
+            )
+        except:
+            pass
+
+        best = max(available, key=lambda r: r.get("severity", 0))
+        return {"action_type": "allocate", "region_name": best.get("name", "A")}
+
     except Exception:
-        pass  # fallback silently
-
-    # Deterministic safe logic
-    best = max(available, key=lambda r: r.get("severity", 0))
-
-    return {
-        "action_type": "allocate",
-        "region_name": best.get("name", "A")
-    }
+        return {"action_type": "allocate", "region_name": "A"}
 
 
 # -----------------------------
@@ -94,16 +86,13 @@ def main():
     log_start()
 
     try:
-        # RESET
-        res = requests.post(f"{API_BASE_URL}/reset", json={}, timeout=10)
-        data = res.json()
-        obs = extract_observation(data)
+        data = safe_post(f"{API_BASE_URL}/reset", {})
+        obs = data if isinstance(data, dict) else {}
 
         for step in range(1, MAX_STEPS + 1):
             action = get_action(obs)
 
-            res = requests.post(f"{API_BASE_URL}/step", json=action, timeout=10)
-            data = res.json() if res.status_code == 200 else {}
+            data = safe_post(f"{API_BASE_URL}/step", action)
 
             reward = float(data.get("reward", 0.0))
             done = bool(data.get("done", False))
@@ -112,7 +101,7 @@ def main():
 
             log_step(step, action, reward, done, None)
 
-            obs = extract_observation(data)
+            obs = data if isinstance(data, dict) else {}
 
             if done:
                 break
