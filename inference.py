@@ -5,7 +5,11 @@ from openai import OpenAI
 # -----------------------------
 # CONFIG
 # -----------------------------
-API_BASE_URL = os.getenv("API_BASE_URL", "http://localhost:8000")
+API_BASE_URL = os.getenv(
+    "API_BASE_URL",
+    "https://codewithharshit17-disaster-response-env.hf.space"
+)
+
 MODEL_NAME = os.getenv("MODEL_NAME", "gpt-3.5-turbo")
 API_KEY = os.getenv("HF_TOKEN")
 
@@ -91,15 +95,15 @@ def main():
 
     try:
         # RESET
-        res = requests.post(f"{API_BASE_URL}/reset", json={})
+        res = requests.post(f"{API_BASE_URL}/reset", json={}, timeout=10)
         data = res.json()
         obs = extract_observation(data)
 
         for step in range(1, MAX_STEPS + 1):
             action = get_action(obs)
 
-            res = requests.post(f"{API_BASE_URL}/step", json=action)
-            data = res.json()
+            res = requests.post(f"{API_BASE_URL}/step", json=action, timeout=10)
+            data = res.json() if res.status_code == 200 else {}
 
             reward = float(data.get("reward", 0.0))
             done = bool(data.get("done", False))
