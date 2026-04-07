@@ -12,6 +12,14 @@ env = DisasterResponseEnv()
 
 
 # -----------------------------
+# HEALTH (required by validator)
+# -----------------------------
+@app.get("/health")
+def health():
+    return {"status": "ok"}
+
+
+# -----------------------------
 # ROOT
 # -----------------------------
 @app.get("/")

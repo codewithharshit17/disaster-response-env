@@ -1,28 +1,17 @@
 import os
 import requests
-from openai import OpenAI
 
-# -----------------------------
-# CONFIG
-# -----------------------------
 API_BASE_URL = os.getenv(
     "API_BASE_URL",
-    "https://codewithharshit17-disaster-response-env.hf.space"
+    "http://localhost:7860"  # FIX: default to local server, not HF Space URL
 )
+
 MODEL_NAME = os.getenv("MODEL_NAME", "gpt-3.5-turbo")
-API_KEY = os.getenv("HF_TOKEN")
-
-client = None
-
-if API_KEY:
-    try:
-        client = OpenAI(api_key=API_KEY)
-    except:
-        client = None
 
 TASK_NAME = "easy"
 ENV_NAME = "disaster_response"
 MAX_STEPS = 5
+REQUEST_TIMEOUT = 30  # FIX: always set a timeout so requests don't hang
 
 
 # -----------------------------
@@ -34,7 +23,9 @@ def log_start():
 
 def log_step(step, action, reward, done, error):
     error_val = error if error else "null"
-    print(f"[STEP] step={step} action={action} reward={reward:.2f} done={str(done).lower()} error={error_val}")
+    print(
+        f"[STEP] step={step} action={action} reward={reward:.2f} done={str(done).lower()} error={error_val}"
+    )
 
 
 def log_end(success, steps, rewards):
@@ -42,64 +33,56 @@ def log_end(success, steps, rewards):
     print(f"[END] success={str(success).lower()} steps={steps} rewards={rewards_str}")
 
 
-# -----------------------------
-# SAFE REQUEST
-# -----------------------------
-def safe_post(url, payload):
-    try:
-        res = requests.post(url, json=payload, timeout=10)
-        if res.status_code == 200:
-            return res.json()
-        return {}
-    except Exception:
-        return {}
+# Safe extractor
+def extract_observation(data):
+    if isinstance(data, dict) and "observation" in data:
+        return data["observation"]
+    return data
 
 
-# -----------------------------
-# ACTION LOGIC
-# -----------------------------
 def get_action(obs):
-    try:
-        regions = obs.get("regions", [])
-        available = [r for r in regions if not r.get("helped", False)]
+    regions = obs.get("regions", [])
 
-        if not available:
-            return {"action_type": "allocate", "region_name": "A"}
-
-        # optional OpenAI call (safe)
-        try:
-            client.chat.completions.create(
-                model=MODEL_NAME,
-                messages=[{"role": "user", "content": "select best region"}],
-                max_tokens=5,
-            )
-        except:
-            pass
-
-        best = max(available, key=lambda r: r.get("severity", 0))
-        return {"action_type": "allocate", "region_name": best.get("name", "A")}
-
-    except Exception:
+    if not regions:
         return {"action_type": "allocate", "region_name": "A"}
 
+    available = [r for r in regions if not r.get("helped", False)]
 
-# -----------------------------
-# MAIN LOOP
-# -----------------------------
+    if not available:
+        return {
+            "action_type": "allocate",
+            "region_name": regions[0].get("name", "A")
+        }
+
+    best = max(available, key=lambda r: r.get("severity", 0))
+
+    return {
+        "action_type": "allocate",
+        "region_name": best.get("name", "A")
+    }
+
+
 def main():
     rewards = []
 
     log_start()
 
     try:
-        data = safe_post(f"{API_BASE_URL}/reset", {})
-        obs = data if isinstance(data, dict) else {}
+        # RESET
+        res = requests.post(f"{API_BASE_URL}/reset", json={}, timeout=REQUEST_TIMEOUT)
+        res.raise_for_status()
+        data = res.json()
+
+        obs = extract_observation(data)
 
         for step in range(1, MAX_STEPS + 1):
             action = get_action(obs)
 
-            data = safe_post(f"{API_BASE_URL}/step", action)
+            res = requests.post(f"{API_BASE_URL}/step", json=action, timeout=REQUEST_TIMEOUT)
+            res.raise_for_status()
+            data = res.json()
 
+            #SAFE EXTRACTION
             reward = float(data.get("reward", 0.0))
             done = bool(data.get("done", False))
 
@@ -107,7 +90,7 @@ def main():
 
             log_step(step, action, reward, done, None)
 
-            obs = data if isinstance(data, dict) else {}
+            obs = extract_observation(data)
 
             if done:
                 break
