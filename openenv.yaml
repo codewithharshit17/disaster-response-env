@@ -64,6 +64,15 @@ endpoints:
   - path: /tasks
     method: GET
     description: List all tasks with action schema
+  - path: /test_inference
+    method: POST
+    description: Test LLM proxy integration (Phase 2 validation)
+  - path: /verify_llm
+    method: GET
+    description: Verify LLM proxy configuration
+  - path: /run_inference
+    method: POST
+    description: Run LLM-powered inference with proxy (Phase 2 validation)
   - path: /health
     method: GET
     description: Health check
