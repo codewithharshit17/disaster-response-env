@@ -9,7 +9,7 @@ try:
 except ImportError:
     from ..models import Observation, Action, Region
 
-from graders.graders import grade_easy, grade_medium, grade_hard
+from graders.easy import grade_easy, grade_medium, grade_hard
 
 
 class DisasterResponseEnv(Environment):
