@@ -27,26 +27,24 @@ class DisasterResponseEnv(Environment):
     # -----------------------------
     def reset(self) -> Observation:
         self._state = State(episode_id=str(uuid4()), step_count=0)
-        task_name = os.getenv("TASK_NAME", "easy").lower()
 
-        # Hardcoded to deterministic regions A, B, C for rigorous grading,
-        # but the specific task name dictates difficulty internally if needed.
         self.regions = [
             Region(name="A", severity=0.9, population=1000, helped=False),
             Region(name="B", severity=0.5, population=500, helped=False),
             Region(name="C", severity=0.7, population=800, helped=False),
         ]
-        
+
         self.time_remaining = 8
         self.step_count = 0
         self.ambulances = 3
         self.done = False
         self.history = []
 
-        
         return Observation(
             regions=self.regions,
-            ambulances=self.ambulances
+            ambulances=self.ambulances,
+            score=0.05,
+            metadata={"score": 0.05}
         )
 
     # -----------------------------
@@ -59,7 +57,7 @@ class DisasterResponseEnv(Environment):
         reward = 0.0
 
         if self.done:
-            return self._get_obs(reward=0.0, done=True, score=0.0)
+            return self._get_obs(reward=0.0, done=True, score=0.05)
 
         # Find region
         target = None
@@ -71,39 +69,30 @@ class DisasterResponseEnv(Environment):
         # Invalid action
         if target is None or self.ambulances <= 0:
             reward = -1.0
-
         else:
-            # Track action
             self.history.append(target.name)
 
             if target.helped:
                 reward = -0.5
-
             else:
-                # severity already 0–1
-                severity_score = target.severity  
-
-                # normalize population
-                population_score = target.population / 1000  
-
-                # combined reward
+                severity_score = target.severity
+                population_score = target.population / 1000
                 reward = 0.7 * severity_score + 0.3 * population_score
-
                 target.helped = True
                 self.ambulances -= 1
 
-        # ⏳ time penalty
+        # Time penalty
         reward -= 0.05
 
-        # Done condition (UPDATED)
+        # Done condition
         if self.time_remaining <= 0 or self.ambulances == 0 or all(r.helped for r in self.regions):
             self.done = True
 
-        # 🎯 bonus for finishing all regions
+        # Bonus for finishing all regions
         if all(r.helped for r in self.regions):
             reward += 1.0
 
-        # Grading (IMPORTANT)
+        # Grading — score goes into top-level field AND metadata
         task_name = os.getenv("TASK_NAME", "easy").lower()
         if task_name == "hard":
             score = grade_hard(self.history)
@@ -117,16 +106,16 @@ class DisasterResponseEnv(Environment):
     # -----------------------------
     # OBSERVATION & STATE
     # -----------------------------
-    def _get_obs(self, reward=0.0, done=False, score=0.0) -> Observation:
+    def _get_obs(self, reward=0.0, done=False, score=0.05) -> Observation:
         return Observation(
             regions=self.regions,
             ambulances=self.ambulances,
             reward=reward,
             done=done,
-            metadata={"score": score}
+            score=score,           # top-level: read by deterministic grader
+            metadata={"score": score}  # keep for backwards compat
         )
 
     @property
     def state(self) -> State:
-        """Get the current environment state."""
         return self._state

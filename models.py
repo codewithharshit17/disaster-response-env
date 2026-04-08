@@ -20,7 +20,9 @@ class Observation(BaseModel):
     ambulances: int
     reward: float = 0.0
     done: bool = False
+    score: float = 0.0        # top-level score for deterministic grader
     metadata: dict = {}
+
 
 # -----------------------------
 # Action (what agent does)
