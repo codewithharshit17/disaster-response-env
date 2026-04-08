@@ -31,12 +31,12 @@ def root():
         "endpoints": {
             "health": "/health",
             "docs": "/docs",
-            "reset": "/reset",
-            "step": "/step",
-            "state": "/state",
-            "grader": "/grader",
-            "baseline": "/baseline",
-            "tasks": "/tasks",
+            "reset": "/reset (POST)",
+            "step": "/step (POST)",
+            "state": "/state (GET)",
+            "grader": "/grader (POST)",
+            "baseline": "/baseline (GET)",
+            "tasks": "/tasks (GET)",
         }
     })
 
