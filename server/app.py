@@ -5,7 +5,11 @@ import os
 
 from models import Action
 from server.env import DisasterResponseEnv
-from graders.easy import grade_easy, grade_medium, grade_hard
+
+try:
+    from tasks.tasks import grade_easy, grade_medium, grade_hard
+except ImportError:
+    from graders.easy import grade_easy, grade_medium, grade_hard
 
 app = FastAPI()
 env: DisasterResponseEnv = None
@@ -59,7 +63,7 @@ def grader(payload: dict):
     """
     Accepts: {"task_id": "easy"|"medium"|"hard", "history": ["A","C","B"]}
     OR:      {"task_id": ..., "trajectory": [...step dicts...]}
-    Returns: {"score": float, "task_id": str}
+    Returns: {"score": float, "passed": bool, "feedback": str, "task_id": str}
     """
     task_id = payload.get("task_id", "easy").lower()
 
@@ -73,14 +77,8 @@ def grader(payload: dict):
             if region:
                 history.append(region)
 
-    if task_id == "hard":
-        score = grade_hard(history)
-    elif task_id == "medium":
-        score = grade_medium(history)
-    else:
-        score = grade_easy(history)
-
-    return {"score": score, "task_id": task_id}
+    result = env.run_grader(task_id, history)
+    return JSONResponse(content=result)
 
 
 # --------------------------------------------------
@@ -95,30 +93,25 @@ def baseline():
     """
     optimal_history = ["A", "C", "B"]
 
-    results = {
-        "easy": {
-            "score": grade_easy(optimal_history),
-            "history": optimal_history,
-            "task_id": "easy",
-        },
-        "medium": {
-            "score": grade_medium(optimal_history),
-            "history": optimal_history,
-            "task_id": "medium",
-        },
-        "hard": {
-            "score": grade_hard(optimal_history),
-            "history": optimal_history,
-            "task_id": "hard",
-        },
-    }
-
-    # Validate all scores are strictly in (0, 1) before returning
-    for task_id, result in results.items():
+    results = {}
+    scores = []
+    
+    for task_id in ["easy", "medium", "hard"]:
+        result = env.run_grader(task_id, optimal_history)
+        results[task_id] = result
+        scores.append(result["score"])
+        
+        # Validate score is strictly in (0, 1)
         s = result["score"]
         assert 0 < s < 1, f"Score out of range for {task_id}: {s}"
 
-    return JSONResponse(content=results)
+    avg_score = sum(scores) / len(scores) if scores else 0.0
+    
+    return JSONResponse(content={
+        "baseline_agent": "oracle (optimal order: A → C → B)",
+        "results": results,
+        "average_score": round(avg_score, 4)
+    })
 
 
 # --------------------------------------------------

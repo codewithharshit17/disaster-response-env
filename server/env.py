@@ -9,7 +9,10 @@ try:
 except ImportError:
     from ..models import Observation, Action, Region
 
-from graders.easy import grade_easy, grade_medium, grade_hard
+try:
+    from tasks.tasks import grade_easy, grade_medium, grade_hard
+except ImportError:
+    from ..tasks.tasks import grade_easy, grade_medium, grade_hard
 
 
 class DisasterResponseEnv(Environment):
@@ -102,6 +105,40 @@ class DisasterResponseEnv(Environment):
             score = grade_easy(self.history)
 
         return self._get_obs(reward=reward, done=self.done, score=score)
+
+    # -----------------------------
+    # GRADING
+    # -----------------------------
+    def run_grader(self, task_id: str, history: list) -> dict:
+        """
+        Grade a trajectory (history of region actions) for a specific task.
+        Returns: {"score": float, "passed": bool, "feedback": str, "task_id": str}
+        """
+        task_id = task_id.lower()
+        
+        if task_id == "hard":
+            score = grade_hard(history)
+        elif task_id == "medium":
+            score = grade_medium(history)
+        else:
+            score = grade_easy(history)
+        
+        passed = score > 0.5
+        
+        # Generate feedback based on task and score
+        if task_id == "easy":
+            feedback = f"Easy task: picked region {history[0] if history else 'none'} first (score: {score:.2f})"
+        elif task_id == "medium":
+            feedback = f"Medium task: covered {len(set(history) & {'A', 'B', 'C'})} regions (score: {score:.2f})"
+        else:
+            feedback = f"Hard task: ordering and efficiency score {score:.2f}"
+        
+        return {
+            "score": score,
+            "passed": passed,
+            "feedback": feedback,
+            "task_id": task_id
+        }
 
     # -----------------------------
     # OBSERVATION & STATE

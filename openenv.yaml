@@ -61,6 +61,9 @@ endpoints:
   - path: /baseline
     method: GET
     description: Run oracle baseline and return scores for all 3 tasks
+  - path: /tasks
+    method: GET
+    description: List all tasks with action schema
   - path: /health
     method: GET
     description: Health check
