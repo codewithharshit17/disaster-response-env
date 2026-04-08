@@ -25,6 +25,17 @@ class DisasterResponseEnv(Environment):
         self.history: List[str] = []
         self._state = State(episode_id=str(uuid4()), step_count=0)
 
+    # ===== Task & Grader Discovery =====
+    @staticmethod
+    def list_tasks():
+        """Return list of all task definitions"""
+        return [
+            {"id": "easy", "description": "Allocate ambulance to highest severity region"},
+            {"id": "medium", "description": "Handle multiple regions with full coverage"},
+            {"id": "hard", "description": "Optimize disaster response with correct priority"},
+        ]
+
+    # ===== Episode Control =====
     # -----------------------------
     # RESET
     # -----------------------------
