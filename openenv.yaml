@@ -8,10 +8,10 @@ environment:
 tasks:
   easy:
     description: Allocate ambulance to highest severity region
-    grader: graders.easy:grade
+    grader: graders.easy:grade_easy
   medium:
     description: Handle multiple regions efficiently
-    grader: graders.medium:grade
+    grader: graders.easy:grade_medium
   hard:
     description: Optimize full disaster response
-    grader: graders.hard:grade
+    grader: graders.easy:grade_hard
