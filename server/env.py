@@ -54,11 +54,20 @@ class DisasterResponseEnv(Environment):
         self.done = False
         self.history = []
 
+        # Use actual graded score instead of hardcoded value
+        task_name = os.getenv("TASK_NAME", "easy").lower()
+        if task_name == "hard":
+            initial_score = grade_hard(self.history)
+        elif task_name == "medium":
+            initial_score = grade_medium(self.history)
+        else:
+            initial_score = grade_easy(self.history)
+
         return Observation(
             regions=self.regions,
             ambulances=self.ambulances,
-            score=0.05,
-            metadata={"score": 0.05}
+            score=initial_score,
+            metadata={"score": initial_score}
         )
 
     # -----------------------------
