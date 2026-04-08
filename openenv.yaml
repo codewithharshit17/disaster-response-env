@@ -1,20 +1,72 @@
 name: disaster_response_env
 version: "0.1.0"
-description: Disaster response planning environment for OpenEnv hackathon
+description: >
+  Disaster response planning environment for OpenEnv hackathon.
+  An agent allocates ambulances to regions based on severity and population.
 
-environment:
-  entrypoint: server.app:app
+author: "Team SST"
+tags:
+  - openenv
+  - disaster-response
+  - real-world
+  - resource-allocation
 
 tasks:
-  easy:
-    description: Allocate ambulance to highest severity region
-    grader: deterministic
-    score_range: [0.0, 1.0]
-  medium:
-    description: Handle multiple regions efficiently
-    grader: deterministic
-    score_range: [0.0, 1.0]
-  hard:
-    description: Optimize full disaster response
-    grader: deterministic
-    score_range: [0.0, 1.0]
+  - id: easy
+    description: "Allocate ambulance to highest severity region"
+    difficulty: easy
+    max_attempts: 10
+    scoring: "0.0-1.0 partial credit based on severity of first pick"
+
+  - id: medium
+    description: "Handle multiple regions efficiently with full coverage"
+    difficulty: medium
+    max_attempts: 10
+    scoring: "0.0-1.0 partial credit based on severity-weighted coverage"
+
+  - id: hard
+    description: "Optimize full disaster response in correct priority order"
+    difficulty: hard
+    max_attempts: 10
+    scoring: "0.0-1.0 partial credit based on ordering and efficiency"
+
+observation_space:
+  regions: "list of regions with name, severity, population, helped"
+  ambulances: "int — remaining ambulances"
+  reward: "float — step reward"
+  done: "bool — episode complete"
+  score: "float — current grader score (0.0-1.0)"
+
+action_space:
+  action_type: "string — allocate"
+  region_name: "string — region to allocate ambulance to (A, B, or C)"
+
+reward:
+  type: continuous
+  range: [-1.0, 2.0]
+
+endpoints:
+  - path: /reset
+    method: POST
+    description: Start a new episode
+  - path: /step
+    method: POST
+    description: Submit an allocation action
+  - path: /state
+    method: GET
+    description: Get current episode metadata
+  - path: /grader
+    method: POST
+    description: Grade a trajectory without running a full episode
+  - path: /baseline
+    method: GET
+    description: Run oracle baseline and return scores for all 3 tasks
+  - path: /health
+    method: GET
+    description: Health check
+
+runtime:
+  framework: FastAPI + OpenEnv
+  python: "3.11"
+  docker: true
+  hf_spaces: true
