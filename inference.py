@@ -2,12 +2,13 @@ import os
 import requests
 from openai import OpenAI
 
-# -----------------------------
-# CONFIG
-# -----------------------------
-API_BASE_URL = os.getenv("API_BASE_URL", "http://localhost:8000")
+API_BASE_URL = os.getenv(
+    "API_BASE_URL",
+    "https://codewithharshit17-disaster-response-env.hf.space"
+)
+
 MODEL_NAME = os.getenv("MODEL_NAME", "gpt-3.5-turbo")
-API_KEY = os.getenv("HF_TOKEN")
+API_KEY = os.getenv("HF_TOKEN", "dummy")
 
 client = OpenAI(base_url="https://api.openai.com/v1", api_key=API_KEY)
 
@@ -35,18 +36,13 @@ def log_end(success, steps, rewards):
     print(f"[END] success={str(success).lower()} steps={steps} rewards={rewards_str}")
 
 
-# -----------------------------
-# OBS HANDLING
-# -----------------------------
+# Safe extractor
 def extract_observation(data):
     if isinstance(data, dict) and "observation" in data:
         return data["observation"]
     return data
 
 
-# -----------------------------
-# ACTION LOGIC (WITH OPENAI CALL)
-# -----------------------------
 def get_action(obs):
     regions = obs.get("regions", [])
 
@@ -61,18 +57,6 @@ def get_action(obs):
             "region_name": regions[0].get("name", "A")
         }
 
-    #Minimal OpenAI usage (for compliance)
-    try:
-        prompt = f"Select best region based on severity: {available}"
-        client.chat.completions.create(
-            model=MODEL_NAME,
-            messages=[{"role": "user", "content": prompt}],
-            max_tokens=10,
-        )
-    except Exception:
-        pass  # fallback silently
-
-    # Deterministic safe logic
     best = max(available, key=lambda r: r.get("severity", 0))
 
     return {
@@ -81,9 +65,6 @@ def get_action(obs):
     }
 
 
-# -----------------------------
-# MAIN LOOP
-# -----------------------------
 def main():
     rewards = []
 
@@ -93,6 +74,7 @@ def main():
         # RESET
         res = requests.post(f"{API_BASE_URL}/reset", json={})
         data = res.json()
+
         obs = extract_observation(data)
 
         for step in range(1, MAX_STEPS + 1):
@@ -101,6 +83,7 @@ def main():
             res = requests.post(f"{API_BASE_URL}/step", json=action)
             data = res.json()
 
+            #SAFE EXTRACTION
             reward = float(data.get("reward", 0.0))
             done = bool(data.get("done", False))
 
