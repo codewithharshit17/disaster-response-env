@@ -30,7 +30,7 @@ def grade_medium(history: list) -> float:
     Medium: Did the agent cover all regions, weighted by severity?
     """
     if not history:
-        return 0.05
+        return 0.1
 
     helped = {}
     for name in history:
