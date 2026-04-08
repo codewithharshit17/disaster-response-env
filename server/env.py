@@ -100,10 +100,6 @@ class DisasterResponseEnv(Environment):
             score = grade_medium(self.history)
         else:
             score = grade_easy(self.history)
-        if score <= 0.0:
-            score = 0.1
-        elif score >= 1.0:
-            score = 0.9
 
         return self._get_obs(reward=reward, done=self.done, score=score)
 

@@ -9,20 +9,35 @@ SEVERITY = {r["name"]: r["severity"] for r in REGIONS}
 OPTIMAL_ORDER = ["A", "C", "B"]  # sorted by severity desc
 
 
+def clamp(score: float) -> float:
+    """
+    Clamp score to strictly between (0, 1).
+    - if score <= 0 → return 0.1
+    - if score >= 1 → return 0.9
+    - else return score
+    """
+    if score <= 0.0:
+        return 0.1
+    elif score >= 1.0:
+        return 0.9
+    else:
+        return score
+
+
 def grade_easy(history: list) -> float:
     """
     Easy: Did the agent pick the highest-severity region first?
     Partial credit based on severity of first pick.
     """
     if not history:
-        return 0.05
+        return 0.1
 
     first_pick = history[0]
     severity_of_first = SEVERITY.get(first_pick, 0.0)
     max_severity = max(SEVERITY.values())  # 0.9
 
     raw = severity_of_first / max_severity  # e.g. 1.0 if picked A, 0.78 if C, 0.56 if B
-    return max(0.01, min(0.99, raw * 0.98))  # ensure never exactly 1.0
+    return clamp(raw)
 
 
 def grade_medium(history: list) -> float:
@@ -41,7 +56,7 @@ def grade_medium(history: list) -> float:
     covered_severity = sum(helped.values())
 
     raw = covered_severity / total_severity
-    return max(0.01, min(0.99, raw))
+    return clamp(raw)
 
 
 def grade_hard(history: list) -> float:
@@ -50,7 +65,7 @@ def grade_hard(history: list) -> float:
     Penalize wasted moves (revisits) and wrong ordering.
     """
     if not history:
-        return 0.05
+        return 0.1
 
     # Order score: compare agent's unique order to optimal
     seen = []
@@ -72,4 +87,4 @@ def grade_hard(history: list) -> float:
     waste_penalty = revisits * 0.1
 
     raw = (order_score / max_order_score) - waste_penalty
-    return max(0.01, min(0.99, raw))
+    return clamp(raw)
