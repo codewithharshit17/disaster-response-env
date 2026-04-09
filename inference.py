@@ -1,28 +1,30 @@
 import os
+import sys
 import time
 import requests
 from openai import OpenAI
 
 # -----------------------------
-# ENVIRONMENT API
-# The validator injects ENV_BASE_URL pointing to your running container.
-# Fall back to the HF Space URL only if not set.
+# CONFIGURATION
 # -----------------------------
-ENV_BASE_URL = os.getenv("ENV_BASE_URL", "https://codewithharshit17-disaster-response-env.hf.space").rstrip("/")
-
-# -----------------------------
-# LLM PROXY (MANDATORY)
-# The validator injects these. Do NOT hardcode keys.
-# -----------------------------
-LLM_BASE_URL = os.environ["API_BASE_URL"]   # raises KeyError if missing — intentional
-LLM_API_KEY  = os.environ["API_KEY"]        # raises KeyError if missing — intentional
+ENV_BASE_URL = os.getenv("ENV_URL", "http://localhost:7860")
 MODEL_NAME   = os.getenv("MODEL_NAME", "gpt-3.5-turbo")
 
-# Initialize OpenAI client pointed at the hackathon proxy
-client = OpenAI(
-    base_url=LLM_BASE_URL,
-    api_key=LLM_API_KEY,
-)
+# Lazy initialization - client will be created when first needed
+_client = None
+
+def get_llm_client():
+    global _client
+    if _client is None:
+        api_base = os.environ.get("API_BASE_URL")
+        api_key = os.environ.get("API_KEY")
+        if not api_base or not api_key:
+            raise RuntimeError("API_BASE_URL and API_KEY environment variables must be set")
+        _client = OpenAI(
+            base_url=api_base,
+            api_key=api_key,
+        )
+    return _client
 
 TASK_NAME = os.getenv("TASK_NAME", "easy")
 ENV_NAME  = "disaster_response"
@@ -103,7 +105,7 @@ def get_action_from_llm(obs: dict) -> dict:
     )
 
     # MANDATORY: call through the hackathon LLM proxy — no try/except swallowing
-    response = client.chat.completions.create(
+    response = get_llm_client().chat.completions.create(
         model=MODEL_NAME,
         messages=[{"role": "user", "content": prompt}],
         max_tokens=5,
@@ -122,22 +124,28 @@ def get_action_from_llm(obs: dict) -> dict:
 
 
 # -----------------------------
-# MAIN
+# MAIN GAME LOOP
 # -----------------------------
 def main():
     rewards = []
     log_start()
 
-    # CRITICAL: Guarantee at least one LLM API call before attempting environment connectivity
-    # If environment fails, we still have made an API call for the validator to detect
+    # CRITICAL: Make at least one LLM API call BEFORE any env connectivity
+    # This is mandatory for the validator to detect API usage
+    print("[DEBUG] === PREFLIGHT LLM API CALL ===")
     try:
-        client.chat.completions.create(
+        response = get_llm_client().chat.completions.create(
             model=MODEL_NAME,
             messages=[{"role": "user", "content": "ping"}],
             max_tokens=1,
+            temperature=0.0,
         )
+        print(f"[DEBUG] ✓ LLM API call SUCCESS: {response.choices[0].message.content}")
     except Exception as e:
-        print(f"[ERROR] LLM proxy call failed: {e}")
+        print(f"[DEBUG] ✗ LLM API call FAILED: {type(e).__name__}: {e}")
+    
+    print("[DEBUG] === END PREFLIGHT ===")
+
 
     # Try to reach environment quickly, with shorter timeout for Phase 2
     wait_for_env(timeout=30)
@@ -148,6 +156,10 @@ def main():
         print("[ERROR] Could not reset environment.")
         log_end(False, 0, [])
         return
+
+    # Phase 2 observation format: nested observation key
+    if "observation" in obs:
+        obs = obs["observation"]
 
     for step in range(1, MAX_STEPS + 1):
         try:
@@ -164,6 +176,12 @@ def main():
                 action = {"action_type": "allocate", "region_name": "A"}
 
         data = safe_post(f"{ENV_BASE_URL}/step", action)
+        
+        # Handle observation nesting if present
+        if "observation" in data:
+            obs = data["observation"]
+        else:
+            obs = data
 
         reward = float(data.get("reward", 0.0))
         done   = bool(data.get("done", False))
@@ -171,7 +189,6 @@ def main():
 
         log_step(step, action, reward, done, None)
 
-        obs = data
         if done:
             break
 

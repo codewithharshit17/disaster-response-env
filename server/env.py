@@ -56,9 +56,9 @@ class DisasterResponseEnv(Environment):
 
         # Use actual graded score instead of hardcoded value
         task_name = os.getenv("TASK_NAME", "easy").lower()
-        if task_name == "hard":
+        if "hard" in task_name:
             initial_score = grade_hard(self.history)
-        elif task_name == "medium":
+        elif "medium" in task_name:
             initial_score = grade_medium(self.history)
         else:
             initial_score = grade_easy(self.history)
@@ -117,9 +117,9 @@ class DisasterResponseEnv(Environment):
 
         # Grading — score goes into top-level field AND metadata
         task_name = os.getenv("TASK_NAME", "easy").lower()
-        if task_name == "hard":
+        if "hard" in task_name:
             score = grade_hard(self.history)
-        elif task_name == "medium":
+        elif "medium" in task_name:
             score = grade_medium(self.history)
         else:
             score = grade_easy(self.history)

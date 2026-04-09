@@ -12,19 +12,19 @@ tags:
   - resource-allocation
 
 tasks:
-  - id: easy
+  - id: task_easy
     description: "Allocate ambulance to highest severity region"
     difficulty: easy
     max_attempts: 10
     scoring: "0.0-1.0 partial credit based on severity of first pick"
 
-  - id: medium
+  - id: task_medium
     description: "Handle multiple regions efficiently with full coverage"
     difficulty: medium
     max_attempts: 10
     scoring: "0.0-1.0 partial credit based on severity-weighted coverage"
 
-  - id: hard
+  - id: task_hard
     description: "Optimize full disaster response in correct priority order"
     difficulty: hard
     max_attempts: 10
@@ -78,6 +78,7 @@ endpoints:
     description: Health check
 
 runtime:
+  app: server.app:app
   framework: FastAPI + OpenEnv
   python: "3.11"
   docker: true
