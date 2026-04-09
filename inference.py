@@ -79,6 +79,23 @@ async def grade_hard_endpoint(request: Request):
     score = clamp_score(grade_hard(data.get("history", [])))
     return {"score": score, "task_id": "task_hard", "passed": score > 0.5}
 
+@app.get("/")
+def root():
+    return {
+        "name": "Disaster Response Environment",
+        "description": "OpenEnv Phase 2 compliant disaster response planning environment.",
+        "status": "online",
+        "version": "1.0.0",
+        "endpoints": {
+            "health": "/health",
+            "reset": "/reset",
+            "step": "/step",
+            "state": "/state",
+            "graders": ["/grade/task_easy", "/grade/task_medium", "/grade/task_hard"],
+            "docs": "/docs"
+        }
+    }
+
 @app.get("/health")
 async def health():
     return {"status": "ok"}
