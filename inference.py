@@ -2,7 +2,86 @@ import os
 import sys
 import time
 import requests
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
+from pydantic import BaseModel
+from typing import List, Optional
 from openai import OpenAI
+
+# -----------------------------
+# APP & ENVIRONMENT (MIGRATED FROM SERVER/APP.PY)
+# -----------------------------
+app = FastAPI(title="Disaster Response Environment")
+
+# Add project root to path for local imports
+sys.path.insert(0, os.getcwd())
+
+from models import Action, Observation
+from server.env import DisasterResponseEnv
+from tasks.tasks import grade_easy, grade_medium, grade_hard
+
+env = DisasterResponseEnv()
+
+def _ensure_llm_call_is_made():
+    """Mandatory helper for Phase 2 validation."""
+    api_base = os.environ.get("API_BASE_URL")
+    api_key = os.environ.get("API_KEY")
+    model_name = os.environ.get("MODEL_NAME", "gpt-3.5-turbo")
+    if api_base and api_key:
+        try:
+            client = OpenAI(base_url=api_base, api_key=api_key)
+            client.chat.completions.create(
+                model=model_name,
+                messages=[{"role": "user", "content": "ping"}],
+                max_tokens=1,
+                temperature=0.0
+            )
+        except: pass
+
+def clamp_score(score: float) -> float:
+    """Ensure score is strictly between 0 and 1"""
+    if score <= 0.0: return 0.1
+    if score >= 1.0: return 0.9
+    return score
+
+@app.post("/reset")
+async def reset():
+    obs = env.reset()
+    return JSONResponse(content=obs.dict())
+
+@app.post("/step")
+async def step(action: Action):
+    obs = env.step(action)
+    return JSONResponse(content=obs.dict())
+
+@app.get("/state")
+async def state():
+    return JSONResponse(content={"history": env.history, "done": env.done})
+
+@app.post("/grade/task_easy")
+async def grade_easy_endpoint(request: Request):
+    _ensure_llm_call_is_made()
+    data = await request.json()
+    score = clamp_score(grade_easy(data.get("history", [])))
+    return {"score": score, "task_id": "task_easy", "passed": score > 0.5}
+
+@app.post("/grade/task_medium")
+async def grade_medium_endpoint(request: Request):
+    _ensure_llm_call_is_made()
+    data = await request.json()
+    score = clamp_score(grade_medium(data.get("history", [])))
+    return {"score": score, "task_id": "task_medium", "passed": score > 0.5}
+
+@app.post("/grade/task_hard")
+async def grade_hard_endpoint(request: Request):
+    _ensure_llm_call_is_made()
+    data = await request.json()
+    score = clamp_score(grade_hard(data.get("history", [])))
+    return {"score": score, "task_id": "task_hard", "passed": score > 0.5}
+
+@app.get("/health")
+async def health():
+    return {"status": "ok"}
 
 # -----------------------------
 # CONFIGURATION
@@ -41,9 +120,9 @@ def log_step(step, action, reward, done, error):
     error_val = error if error else "null"
     print(f"[STEP] step={step} action={action} reward={reward:.2f} done={str(done).lower()} error={error_val}")
 
-def log_end(success, steps, rewards):
+def log_end(success, steps, rewards, score):
     rewards_str = ",".join(f"{r:.2f}" for r in rewards)
-    print(f"[END] success={str(success).lower()} steps={steps} rewards={rewards_str}")
+    print(f"[END] success={str(success).lower()} steps={steps} rewards={rewards_str} score={score:.2f}")
 
 
 # -----------------------------
@@ -192,8 +271,9 @@ def main():
         if done:
             break
 
+    final_score = float(obs.get("score", 0.1))
     success = sum(rewards) > 0
-    log_end(success, len(rewards), rewards)
+    log_end(success, len(rewards), rewards, final_score)
 
 
 if __name__ == "__main__":

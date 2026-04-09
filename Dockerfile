@@ -77,4 +77,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
 
 # Run the FastAPI server
 # The module path is constructed to work with the /app/env structure, and the port is set to 8000 by default (can be overridden with PORT env var)
-CMD ["uvicorn", "server.app:app", "--host", "0.0.0.0", "--port", "7860"]
+CMD ["uvicorn", "inference:app", "--host", "0.0.0.0", "--port", "7860"]
