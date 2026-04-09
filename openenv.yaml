@@ -1,5 +1,5 @@
 spec_version: 1
-name: disaster-response-env
+name: disaster_response_env
 version: "1.0.0"
 type: space
 runtime: fastapi
@@ -9,13 +9,13 @@ port: 7860
 tasks:
   - id: task_easy
     difficulty: easy
-    grader: /grade/task_easy
+    grader: grade/task_easy
   - id: task_medium
     difficulty: medium
-    grader: /grade/task_medium
+    grader: grade/task_medium
   - id: task_hard
     difficulty: hard
-    grader: /grade/task_hard
+    grader: grade/task_hard
 
 observation_space:
   regions: "list of regions with name, severity, population, helped"
@@ -31,21 +31,3 @@ action_space:
 reward:
   type: continuous
   range: [-1.0, 2.0]
-
-endpoints:
-  - path: /reset
-    method: POST
-  - path: /step
-    method: POST
-  - path: /state
-    method: GET
-  - path: /grade/task_easy
-    method: POST
-  - path: /grade/task_medium
-    method: POST
-  - path: /grade/task_hard
-    method: POST
-  - path: /grader
-    method: POST
-  - path: /health
-    method: GET

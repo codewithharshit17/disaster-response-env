@@ -58,34 +58,54 @@ async def step(action: Action):
 async def state():
     return JSONResponse(content={"history": env.history, "done": env.done})
 
-@app.post("/grade/task_easy")
+@app.api_route("/grade/task_easy", methods=["GET", "POST"])
 async def grade_easy_endpoint(request: Request):
     _ensure_llm_call_is_made()
-    data = await request.json()
-    score = clamp_score(grade_easy(data.get("history", [])))
+    history = []
+    if request.method == "POST":
+        try:
+            data = await request.json()
+            history = data.get("history", [])
+        except: pass
+    score = clamp_score(grade_easy(history))
     return {"score": score, "task_id": "task_easy", "passed": score > 0.5}
 
-@app.post("/grade/task_medium")
+@app.api_route("/grade/task_medium", methods=["GET", "POST"])
 async def grade_medium_endpoint(request: Request):
     _ensure_llm_call_is_made()
-    data = await request.json()
-    score = clamp_score(grade_medium(data.get("history", [])))
+    history = []
+    if request.method == "POST":
+        try:
+            data = await request.json()
+            history = data.get("history", [])
+        except: pass
+    score = clamp_score(grade_medium(history))
     return {"score": score, "task_id": "task_medium", "passed": score > 0.5}
 
-@app.post("/grade/task_hard")
+@app.api_route("/grade/task_hard", methods=["GET", "POST"])
 async def grade_hard_endpoint(request: Request):
     _ensure_llm_call_is_made()
-    data = await request.json()
-    score = clamp_score(grade_hard(data.get("history", [])))
+    history = []
+    if request.method == "POST":
+        try:
+            data = await request.json()
+            history = data.get("history", [])
+        except: pass
+    score = clamp_score(grade_hard(history))
     return {"score": score, "task_id": "task_hard", "passed": score > 0.5}
 
-@app.post("/grader")
+@app.api_route("/grader", methods=["GET", "POST"])
 async def grader_catchall(request: Request):
     """General grader endpoint that delegates based on task_id"""
     _ensure_llm_call_is_made()
-    data = await request.json()
-    task_id = data.get("task_id", "task_easy").lower()
-    history = data.get("history", [])
+    task_id = "task_easy"
+    history = []
+    if request.method == "POST":
+        try:
+            data = await request.json()
+            task_id = data.get("task_id", "task_easy").lower()
+            history = data.get("history", [])
+        except: pass
     
     if "hard" in task_id:
         score = grade_hard(history)
