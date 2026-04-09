@@ -90,6 +90,46 @@ def grade_hard(history: list) -> float:
     return clamp(raw)
 
 
+def grade_advanced(history: list) -> float:
+    """
+    Advanced: Cover A and C, but avoid B (e.g., assuming B is inaccessible or too low priority).
+    """
+    if not history:
+        return 0.1
+    
+    score = 0.0
+    if "A" in history: score += 0.4
+    if "C" in history: score += 0.4
+    if "B" not in history: 
+        score += 0.2  # Bonus for avoiding B
+    else:
+        score -= 0.3  # Penalty for visiting B
+        
+    return clamp(score)
+
+
+def grade_expert(history: list) -> float:
+    """
+    Expert: Resolve the two highest severity regions (A and C) in exactly 2 steps.
+    """
+    if not history:
+        return 0.1
+        
+    # Perfect run
+    if len(history) == 2 and set(history) == {"A", "C"}:
+        return 0.9
+        
+    # Covered both but took too many steps
+    if "A" in history and "C" in history:
+        return 0.5
+        
+    # Covered only one
+    if "A" in history or "C" in history:
+        return 0.3
+        
+    return clamp(0.1)
+
+
 TASKS = {
     "easy": {
         "description": "Allocate ambulance to highest severity region",
@@ -99,5 +139,11 @@ TASKS = {
     },
     "hard": {
         "description": "Optimize full disaster response in correct priority order",
+    },
+    "advanced": {
+        "description": "Cover severe regions while avoiding low-priority region B",
+    },
+    "expert": {
+        "description": "Resolve the highest severity regions in exactly 2 steps",
     },
 }

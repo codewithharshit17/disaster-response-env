@@ -8,11 +8,31 @@ port: 7860
 
 tasks:
   - id: task_easy
+    name: Easy Task
+    description: Allocate ambulance to highest severity region
     difficulty: easy
-    grader: grade/task_easy
+    grader: /grade/task_easy
+    
   - id: task_medium
+    name: Medium Task
+    description: Handle multiple regions efficiently with full coverage
     difficulty: medium
-    grader: grade/task_medium
+    grader: /grade/task_medium
+    
   - id: task_hard
+    name: Hard Task
+    description: Optimize full disaster response in correct priority order
     difficulty: hard
-    grader: grade/task_hard
+    grader: /grade/task_hard
+
+  - id: task_advanced
+    name: Advanced Task
+    description: Cover severe regions (A and C) while avoiding the low-priority region (B).
+    difficulty: hard
+    grader: /grade/task_advanced
+
+  - id: task_expert
+    name: Expert Task
+    description: Perfect efficiency. Resolve the two highest severity regions in exactly 2 steps.
+    difficulty: hard
+    grader: /grade/task_expert
