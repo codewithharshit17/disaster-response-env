@@ -1,5 +1,5 @@
 spec_version: 1
-name: disaster_response_env
+name: disaster-response-env
 version: "1.0.0"
 type: space
 runtime: fastapi
@@ -16,18 +16,3 @@ tasks:
   - id: task_hard
     difficulty: hard
     grader: grade/task_hard
-
-observation_space:
-  regions: "list of regions with name, severity, population, helped"
-  ambulances: "int — remaining ambulances"
-  reward: "float — step reward"
-  done: "bool — episode complete"
-  score: "float — current grader score (0.0-1.0)"
-
-action_space:
-  action_type: "string — allocate"
-  region_name: "string — region to allocate ambulance to (A, B, or C)"
-
-reward:
-  type: continuous
-  range: [-1.0, 2.0]

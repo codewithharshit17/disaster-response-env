@@ -14,9 +14,16 @@ from openai import OpenAI
 app = FastAPI(title="Disaster Response Environment")
 
 # Add project root to path for local imports
-sys.path.insert(0, os.getcwd())
+PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
+if PROJECT_ROOT not in sys.path:
+    sys.path.insert(0, PROJECT_ROOT)
 
-from models import Action, Observation
+try:
+    from models import Action, Observation
+except ImportError:
+    # Fallback for different import styles
+    from .models import Action, Observation
+
 from server.env import DisasterResponseEnv
 from tasks.tasks import grade_easy, grade_medium, grade_hard
 
