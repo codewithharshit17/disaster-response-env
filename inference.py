@@ -79,6 +79,24 @@ async def grade_hard_endpoint(request: Request):
     score = clamp_score(grade_hard(data.get("history", [])))
     return {"score": score, "task_id": "task_hard", "passed": score > 0.5}
 
+@app.post("/grader")
+async def grader_catchall(request: Request):
+    """General grader endpoint that delegates based on task_id"""
+    _ensure_llm_call_is_made()
+    data = await request.json()
+    task_id = data.get("task_id", "task_easy").lower()
+    history = data.get("history", [])
+    
+    if "hard" in task_id:
+        score = grade_hard(history)
+    elif "medium" in task_id:
+        score = grade_medium(history)
+    else:
+        score = grade_easy(history)
+        
+    score = clamp_score(score)
+    return {"score": score, "task_id": task_id, "passed": score > 0.5}
+
 @app.get("/")
 def root():
     return {
